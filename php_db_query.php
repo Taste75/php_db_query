@@ -32,25 +32,27 @@
 			param:
 			$table : 表名
 			$arr(
-				键名 : 键值
-				$key : $value,
+				键名 => 键值
+				$key => $value,
 				...
 			)
 			return:
-			返回一个数组
+			success : 返回一个数组
+			fail    : 0
 		**/
 		public function select($table, $arr){
 			$db=self::connect();
 			if(!$db){
 				exit;
 			}
-			$selectQuery = "";
 			if(count($arr)){
-				$selectQuery .= "Select * from ".$table." where ";
+				$selectQuery = "Select * from ".$table." where ";
 				foreach($arr as $key => $value){
 					$selectQuery .= (string)$key." like '".(string)$value."' and ";
 				}
 				$selectQuery = substr($selectQuery, 0, -5);
+			}else{
+				return 0;
 			}
 			$result = $db->query($selectQuery);
 			$num_results = $result->num_rows;
@@ -77,9 +79,10 @@
 			param:
 			$table : 表名
 			$arr(
-				键名 : 键值
-				$key : $value,
+				[数值1,数值2,数值3,..],
+				[数值1,数值2,数值3,..],
 				...
+				(按照表的字段顺序，多个数组为插入多条数据)
 			)
 			return:
 			success : 1
@@ -91,9 +94,27 @@
 				exit;
 			}
 
-			$insertQuery = "";
-			$result->free();
+			if(count($arr)){
+				foreach($arr as $key => $value){
+					$insertQuery = "insert into ".$table." values(";
+					for($i=0,$len=count($value);$i<$len;$i++){
+						$insertQuery .= "'".$value[$i]."',";
+					}
+					$insertQuery = substr($insertQuery, 0, -1).")";
+					echo $insertQuery;
+
+					if($db->query($insertQuery)){
+						$flag = 1;
+					}else{
+						$flag = 0;
+						return $flag;
+					};
+				}
+			}
+
 			$db->close();
+
+			return $flag;
 		}
 
 	}
