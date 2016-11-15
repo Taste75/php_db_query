@@ -56,7 +56,11 @@
 				return "数组为空";
 			}
 			$result = $db->query($selectQuery);
-			$num_results = $result->num_rows;
+			if($result->num_rows){
+				$num_results = $result->num_rows;
+			}else{
+				return 0;
+			}
 			$resArr = null;
 			for($i=0;$i<$num_results;$i++){
 				$row = $result->fetch_assoc();
@@ -68,7 +72,10 @@
 				$resArr[$i]=$res;
 			};
 
-			$result->free();
+			if($result){
+				$result->free();
+			}
+
 			$db->close();
 
 			return $resArr;
@@ -80,8 +87,8 @@
 			param:
 			$table : 表名
 			$arr(
-				[数值1,数值2,数值3,..],
-				[数值1,数值2,数值3,..],
+				[$key11 => $value11,$key12 => $value12,$key13 => $value13,..],
+				[$key21 => $value21,$key22 => $value22,$key23 => $value23,..],
 				...
 				(按照表的字段顺序，多个数组为更新多条数据)
 			)
@@ -97,19 +104,25 @@
 			if(!$db){
 				exit;
 			}
-
+			$columnsArr = self::showColumns($table);
 			if(count($arr)){
 				foreach($arr as $key => $value){
-					$insertQuery = "insert into ".$table." values(";
-					for($i=0,$len=count($value);$i<$len;$i++){
-						$insertQuery .= "'".$value[$i]."',";
+					$insertQuery1 = "insert into ".$table." (";
+					$insertQuery2 = " values(";
+					foreach($value as $col => $elems){
+						if(in_array($col,$columnsArr)){
+							$insertQuery1 .= $col.",";
+							$insertQuery2 .= "'".$elems."',";
+						}
 					}
-					$insertQuery = substr($insertQuery, 0, -1).")";
+					$insertQuery1 = substr($insertQuery1, 0, -1).")";
+					$insertQuery2 = substr($insertQuery2, 0, -1).")";
+					$insertQuery=$insertQuery1.$insertQuery2;
 					//echo $insertQuery;
 
 					$result = $db->query($insertQuery);
 					if($result){
-						echo "插入成功！";
+						//echo "插入成功！";
 					}else{
 						echo "插入失败！具体信息如下：";
 						var_dump($value);
@@ -161,7 +174,7 @@
 
 					$result=$db->query($updateQuery);
 					if($result){
-						echo "更新成功！";
+						//echo "更新成功！";
 					}else{
 						echo "更新失败！具体信息如下：";
 						var_dump($value);
@@ -219,7 +232,7 @@
 
 					$result=$db->query($deleteQuery);
 					if($result){
-						echo "删除成功！";
+						//echo "删除成功！";
 					}else{
 						echo "删除失败！具体信息如下：";
 						var_dump($value);
@@ -232,6 +245,52 @@
 			$db->close();
 
 			return $result;
+		}
+		/***
+			查找字段名
+			param:
+			$table : 表名
+
+			return:
+			success : 包含字段名的数组
+			fail    : 0
+
+			EX:
+			数组中有错误信息时，会忽略，继续更新
+			数据库中没有的数据不会删除，也不会报错，显示删除成功
+			只有字段不存在才会报错
+		**/
+		private function showColumns($table){
+			$db=self::connect();
+			if(!$db){
+				exit;
+			}
+			if($table){
+				$columnsQuery = "show full columns from ".$table;
+			}else{
+				return 0;
+			}
+			$result = $db->query($columnsQuery);
+
+			if($result->num_rows){
+				$num_results = $result->num_rows;
+			}else{
+				echo 0;
+				return;
+			}
+			$resArr = null;
+			for($i=0;$i<$num_results;$i++){
+				$row = $result->fetch_row();
+				$resArr[$i]=$row[0];
+			};
+			if($result){
+				$result->free();
+			}
+
+			$db->close();
+
+			return $resArr;
+
 		}
 
 	}
